@@ -300,7 +300,7 @@ void unlock_cc(grafo *g, int lock_a, int lock_b)
     pthread_mutex_lock(&g->mu_cc_busy);    
     g->cc_busy[lock_a] = false;
     if (lock_a != lock_b) g->cc_busy[lock_b] = false; 
-    pthread_cond_signal(&g->cv_cc);
+    pthread_cond_broadcast(&g->cv_cc);
     pthread_mutex_unlock(&g->mu_cc_busy);
 }
 
