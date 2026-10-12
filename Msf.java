@@ -40,7 +40,7 @@ public class Msf {
     }
 
     public static long hash(int u, int v) {
-        return (long) ((u + v) * (u + v + 1) / 2 + v);
+        return ((long)(u + v)) * (u + v + 1) / 2 + v;
     }
 
     public static int find(int[] parents, int comp) {
