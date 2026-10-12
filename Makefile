@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-std=c11 -Wall -Wextra -pg -g -O3 -pthread
+CFLAGS=-std=c11 -Wall -Wextra -g -O3 -pthread
 LDLIBS=-lm
 JAVAC=javac
 
