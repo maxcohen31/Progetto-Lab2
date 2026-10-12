@@ -1026,9 +1026,12 @@ int cancella_arco(grafo *g, int u, int v)
         
         /* Getting the minimum edge */
         arco *min_edge = NULL;
-        if (new_w != -1)
+        if (new_w != INT_MAX)
         {
-            min_edge = find_lock(g, new_u, new_v);
+            /* Normalizing edges */
+            int norm_a = (new_u < new_v) ? new_u : new_v;
+            int norm_b = (new_u < new_v) ? new_v : new_u;
+            min_edge = find_lock(g, norm_a, norm_b);
         }
 
         if (min_edge == NULL) /* Edge not found: splitting components */
