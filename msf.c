@@ -677,7 +677,6 @@ void set_msf_neighbors(elemento *l, int idx, bool new_val)
 /* Adds an edge to the graph */
 int aggiungi_arco(grafo *g, int u, int v, int w)
 {
-    // if (u < 0 || v < 0 || g->nodes < u || g->nodes < v) return ILLEGAL;
     /* Edge already exists */
     int fu = u < v ? u : v;
     int fv = u < v ? v : u;
