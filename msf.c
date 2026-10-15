@@ -64,6 +64,8 @@ typedef struct
 
 /* ######## Prototypes ######## */
 
+bool is_prime(int n);
+int make_prime(int hash_size);
 void lock_bucket(grafo *g, int u, int v);
 void unlock_bucket(grafo *g, int u, int v);
 void lock_cc(grafo *g, int u, int v, int *lock_a, int *lock_b);
@@ -105,7 +107,7 @@ int main(int argc, char **argv)
                 thread_num = atoi(optarg);
                 break;
             case 'H':
-                h_size = atoi(optarg);
+                h_size = make_prime(atoi(optarg));
                 break;
             case 'M':
                 nmutex = atoi(optarg);
@@ -280,6 +282,28 @@ int main(int argc, char **argv)
     return 0;
 }
 /* ########## Main's end ########## */
+
+bool is_prime(int n)
+{
+    if (n < 2) return false;
+    if (n % 2 == 0) return n == 2;
+    for (int i = 3; i <= n/i; i++)
+    {
+        if (n % i == 0) return false;
+    }
+    return true;
+}
+
+int make_prime(int hash_size)
+{
+    if (is_prime(hash_size)) return hash_size;
+    int p = hash_size;
+    while (!(is_prime(p)))
+    {
+        p--;
+    }
+    return p;
+}
 
 void lock_cc(grafo *g, int u, int v, int *lock_a, int *lock_b)
 {
