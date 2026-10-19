@@ -1134,11 +1134,8 @@ int cancella_arco(grafo *g, int u, int v)
 
         if (min_edge == NULL) /* Edge not found: splitting components */
         {
-            for (int i = 0; i <= g->nodes; i++)
-            {
-                if (abr_search(root_lu, i)) g->cCon[i] = min_u;
-                else if (abr_search(root_lv, i)) g->cCon[i] = min_v;
-            }
+            for (int i = 0; i < lu_nodes.size; i++) g->cCon[lu_nodes.d[i]] = min_u;
+            for (int i = 0; i < lv_nodes.size; i++) g->cCon[lv_nodes.d[i]] = min_v;
         } 
         else /* Edge found: replacement edge does exist */
         {
