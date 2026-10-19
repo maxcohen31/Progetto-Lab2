@@ -1,4 +1,3 @@
-#include "linked_list.h"
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stddef.h>
