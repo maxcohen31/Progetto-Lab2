@@ -1106,14 +1106,14 @@ int cancella_arco(grafo *g, int u, int v)
         node *abr_to_search;
         if (lu_nodes.size <= lv_nodes.size)
         {
-            *smallest = lu_nodes.size;
-            s = lv_nodes.size;
+            smallest = lu_nodes.d;
+            s = lu_nodes.size;
             abr_to_search = root_lv;
         }
         else 
         {
-            *smallest = lv_nodes.size;
-            s = lu_nodes.size;
+            smallest = lv_nodes.d;
+            s = lv_nodes.size;
             abr_to_search = root_lu;
         }
 
