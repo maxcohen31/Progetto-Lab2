@@ -1164,7 +1164,8 @@ int cancella_arco(grafo *g, int u, int v)
         pthread_mutex_unlock(&g->updates);
         free_abr(root_lu);
         free_abr(root_lv);
-
+        list_free(&lu_nodes);
+        list_free(&lv_nodes);
     }
 
     return DELETED;
