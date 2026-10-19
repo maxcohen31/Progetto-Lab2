@@ -1119,11 +1119,11 @@ int cancella_arco(grafo *g, int u, int v)
         int new_u = -1;
         int new_v = -1;
         int new_w = INT_MAX;
-        find_min(smallest, s, abr_to_search, g, &new_u, &new_v, &new_w);
+        bool is_found = find_min(smallest, s, abr_to_search, g, &new_u, &new_v, &new_w);
         
         /* Getting the minimum edge */
         arco *min_edge = NULL;
-        if (new_w != INT_MAX)
+        if (is_found)
         {
             /* Normalizing edges */
             int norm_a = (new_u < new_v) ? new_u : new_v;
