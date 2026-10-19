@@ -973,15 +973,15 @@ void list_push(list_t *l, int val)
             fprintf(stderr, "Error[Line: %d - File: %s]: realloc failed", QUI);
             exit(2);
         }
-        l->d[l->size] = val;
-        l->size++;
     }
+    l->d[l->size] = val;
+    l->size++;
 }
 
 /* Frees up the memory allocated for the list */
 void list_free(list_t *l) 
 {
-    free(l);
+    free(l->d);
 }
 
 /* Utility - finds the min edge between Lu and Lv components. Returns true if an edge is found */
