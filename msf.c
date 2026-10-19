@@ -155,8 +155,6 @@ int main(int argc, char **argv)
 
     while ((read = getline(&line, &len, f)) != -1)
     {
-        // printf("Line of len: %zu\n", read);
-        // printf("%s\n", line);
         /* Get the number of nodes and arcs */
         if (line[0] == 'p')
         {
