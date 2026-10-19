@@ -352,7 +352,7 @@ void buff_put(buf_t *buf, thread_op op)
     buf->buff[buf->t] = op; 
     buf->t = (buf->t + 1) % BUFF_SIZE;
     buf->counter++;
-    pthread_cond_broadcast(&buf->empty);
+    pthread_cond_signal(&buf->empty);
     pthread_mutex_unlock(&buf->mu);
 }
 
