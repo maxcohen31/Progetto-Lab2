@@ -1,3 +1,4 @@
+#include "linked_list.h"
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stddef.h>
@@ -62,6 +63,16 @@ typedef struct
     buf_t *buf;
 } thread_arg;
 
+/* List struct for Lu and Lv */
+typedef struct 
+{
+    int *d;
+    int size;
+    int cap;
+} list_t;
+
+
+
 /* ######## Prototypes ######## */
 
 bool is_prime(int n);
@@ -85,7 +96,10 @@ void print_graph(grafo *g);
 void free_graph(grafo *gr);
 void stats(grafo *g);
 void set_msf_neighbors(elemento *l, int idx, bool new_val);
-void find_min(node *root_lu, node *root_lv, grafo *g, int *min_u, int *min_v, int *min_w);
+void list_init(list_t *l);
+void list_push(list_t *l, int val);
+void list_free(list_t *l);
+bool find_min(int *nodes, int size, node *other, grafo *g, int *min_u, int *min_v, int *min_w);
 int aggiungi_arco(grafo *g, int u, int v, int w);
 int cancella_arco(grafo *g, int u, int v);
 
@@ -935,34 +949,68 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
     } 
 }
 
-/* Utility - finds the min edge between Lu and Lv components */
-void find_min(node *root_lu, node *root_lv, grafo *g, int *min_u, int *min_v, int *min_w)
+/* Initialises a list l */
+void list_init(list_t *l)
 {
-    if (root_lu == NULL) return;
-    /* Search min in the left subtree */
-    find_min(root_lu->left, root_lv, g, min_u, min_v, min_w);
-    /* Get the original value of u */
-    int orig_u = unshuffle(root_lu->val_node);
-
-    /* Neighbors of u node */
-    elemento *el = g->vicini[orig_u];
-    while (el != NULL)
+    l->cap = 16;
+    l->size = 0;
+    l->d = malloc(sizeof(int) * l->cap);
+    if (l->d == NULL) 
     {
-        if (!el->msf && abr_search(root_lv, el->id))
-        {
-            /* Found an edge */ 
-            if (*min_w == INT_MAX || el->w < *min_w)
-            {
-                /* Update (u, v, w)*/
-                *min_u = orig_u;
-                *min_v = el->id;
-                *min_w = el->w;
-            }
-        }
-        el = el->next; 
+        fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation for l->d failed", QUI);
+        exit(1);
     }
-    /* Search min in the right subtree */
-    find_min(root_lu->right, root_lv, g, min_u, min_v, min_w);
+}
+
+/* Pushes an element into the list */
+void list_push(list_t *l, int val)
+{
+    if (l->size == l->cap)
+    {
+        l->cap *= 2;
+        l->d = realloc(l->d, sizeof(int) * l->cap);
+        if (l->d == NULL)
+        {
+            fprintf(stderr, "Error[Line: %d - File: %s]: realloc failed", QUI);
+            exit(2);
+        }
+        l->d[l->size] = val;
+        l->size++;
+    }
+}
+
+/* Frees up the memory allocated for the list */
+void list_free(list_t *l) 
+{
+    free(l);
+}
+
+/* Utility - finds the min edge between Lu and Lv components. Returns true if an edge is found */
+bool find_min(int *nodes, int size, node *abr, grafo *g, int *min_u, int *min_v, int *min_w)
+{
+    bool found = false;
+    *min_w = INT_MAX;
+    for (int i = 0; i < size; i++)
+    {
+        elemento *el = g->vicini[nodes[i]];
+        while (el != NULL)
+        {
+            if (!el->msf && abr_search(abr, el->id))
+            {
+                /* Found an edge */ 
+                if (!found || el->w < *min_w)
+                {
+                    /* Update (u, v, w)*/
+                    *min_u = nodes[i];
+                    *min_v = el->id;
+                    *min_w = el->w;
+                    found = true;
+                }
+            }
+            el = el->next; 
+        } 
+    }
+    return found;
 }
 
 
@@ -1001,7 +1049,12 @@ int cancella_arco(grafo *g, int u, int v)
 
         /* Building Lu */
         queue_t *qu = queue_init(); /* One queue is enough for both BFS */
+        /* Init list of Lu nodes */
+        list_t lu_nodes;
+        list_init(&lu_nodes);
+        
         root_lu = abr_insert(root_lu, fu);
+        list_push(&lu_nodes, fu);
         enqueue(qu, fu);
 
         /* Performing BFS */
@@ -1016,13 +1069,17 @@ int cancella_arco(grafo *g, int u, int v)
                 if (ele->msf && !(abr_search(root_lu, ele->id)))
                 {
                     root_lu = abr_insert(root_lu, ele->id);
+                    list_push(&lu_nodes, ele->id);
                     enqueue(qu, ele->id);
                 }
                 ele = ele->next;
             }
         }
         /* Building Lv */ 
+        list_t lv_nodes;
+        list_init(&lv_nodes);
         root_lv = abr_insert(root_lv, fv);
+        list_push(&lv_nodes, fv);
         enqueue(qu, fv);
         while (!(is_empty(qu)))
         {
@@ -1035,6 +1092,7 @@ int cancella_arco(grafo *g, int u, int v)
                 if (ele->msf && !(abr_search(root_lv, ele->id)))
                 {
                     root_lv = abr_insert(root_lv, ele->id);
+                    list_push(&lv_nodes, ele->id);
                     enqueue(qu, ele->id);
                 }
                 ele = ele->next;
@@ -1042,10 +1100,27 @@ int cancella_arco(grafo *g, int u, int v)
         } 
         queue_destroy(qu);
 
+        /* Choose the smallest size of nodes for find_min */
+        int *smallest;
+        int s;
+        node *abr_to_search;
+        if (lu_nodes.size <= lv_nodes.size)
+        {
+            *smallest = lu_nodes.size;
+            s = lv_nodes.size;
+            abr_to_search = root_lv;
+        }
+        else 
+        {
+            *smallest = lv_nodes.size;
+            s = lu_nodes.size;
+            abr_to_search = root_lu;
+        }
+
         int new_u = -1;
         int new_v = -1;
         int new_w = INT_MAX;
-        find_min(root_lu, root_lv, g, &new_u, &new_v, &new_w);
+        find_min(smallest, s, abr_to_search, g, &new_u, &new_v, &new_w);
         
         /* Getting the minimum edge */
         arco *min_edge = NULL;
