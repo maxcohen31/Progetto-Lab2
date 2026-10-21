@@ -62,16 +62,6 @@ typedef struct
     buf_t *buf;
 } thread_arg;
 
-/* List struct for Lu and Lv */
-typedef struct 
-{
-    int *d;
-    int size;
-    int cap;
-} list_t;
-
-
-
 /* ######## Prototypes ######## */
 
 bool is_prime(int n);
@@ -95,10 +85,8 @@ void print_graph(grafo *g);
 void free_graph(grafo *gr);
 void stats(grafo *g);
 void set_msf_neighbors(elemento *l, int idx, bool new_val);
-void list_init(list_t *l);
-void list_push(list_t *l, int val);
-void list_free(list_t *l);
-bool find_min(int *nodes, int size, node *other, grafo *g, int *min_u, int *min_v, int *min_w);
+bool find_min(node *root_iter, node *other_abr, grafo *g, int *min_u, int *min_v, int *min_w);
+void update_conn_comp(node *root, int *cCon, int min_id);
 int aggiungi_arco(grafo *g, int u, int v, int w);
 int cancella_arco(grafo *g, int u, int v);
 
@@ -126,7 +114,7 @@ int main(int argc, char **argv)
                 nmutex = atoi(optarg);
                 break;  
             case '?':
-                fprintf(stderr, "Argument not recognized\n");
+                fprintf(stderr, "Argument not recognized");
                 break;
             default:
                 break; 
@@ -135,13 +123,13 @@ int main(int argc, char **argv)
     /* Check if there are more than two arguments */
     if (argc - optind < 2)
     {
-        fprintf(stderr, "Usage:\t%s file_grafo file_archi -t [n_threads] -H [hashsize] -M [nmutex]\nUsage: (optional arguments): msf.out file_grafo file_archi\n", argv[0]);
+        fprintf(stderr, "Usage:\t%s file_grafo file_archi -t [n_threads] -H [hashsize] -M [nmutex]\nUsage: (optional arguments): msf.out file_grafo file_archi", argv[0]);
         exit(1);
     }
     FILE *f = fopen(argv[optind], "r");
     if (f == NULL)
     {
-        fprintf(stderr, "Error[Line: %d File: %s] opening file\n", QUI);
+        fprintf(stderr, "Error[Line: %d File: %s] opening file", QUI);
         exit(2);
     }
 
@@ -162,7 +150,7 @@ int main(int argc, char **argv)
             int e = sscanf(line, "p sp %d %d", &num_node, &num_edge);
             if (e != 2) 
             {
-                fprintf(stderr, "Error [Line: %d - File: %s]: line format not valid!\n", QUI);
+                fprintf(stderr, "Error [Line: %d - File: %s]: line format not valid!", QUI);
                 exit(3);
             } 
             /* Initializes the hast table */
@@ -176,14 +164,14 @@ int main(int argc, char **argv)
             int e = sscanf(line, "a %d %d %d", &u, &v, &w);
             if (e != 3) 
             {
-                fprintf(stderr, "Error[Line: %d - File: %s]: line format not valid\n", QUI);
+                fprintf(stderr, "Error[Line: %d - File: %s]: line format not valid", QUI);
                 exit(4);
             }
             /* Building the hash table */
             arco *arc = malloc(sizeof(arco));
             if (arc == NULL)
             {
-                fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation for arc failed!\n", QUI);
+                fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation for arc failed!", QUI);
                 exit(5);
             }
             arc->u = u;
@@ -219,7 +207,7 @@ int main(int argc, char **argv)
     {
         if (pthread_create(&th_arr[i], NULL, consumer_thread, &arg[i]) != 0)
         {
-            fprintf(stderr, "Error[Line: %d - File: %s]: Creation of threads failed\n", QUI);                
+            fprintf(stderr, "Error[Line: %d - File: %s]: Creation of threads failed", QUI);                
             exit(7);
         }
     }
@@ -227,7 +215,7 @@ int main(int argc, char **argv)
     FILE *file_op = fopen(argv[optind + 1], "r");
     if (file_op == NULL)
     {
-        fprintf(stderr, "Error[Line: %d - File: %s]: failed to open file_op\n", QUI);
+        fprintf(stderr, "Error[Line: %d - File: %s]: failed to open file_op", QUI);
         exit(8);
     }
 
@@ -278,7 +266,7 @@ int main(int argc, char **argv)
     {
         if (pthread_join(th_arr[i], NULL) != 0)
         {
-            fprintf(stderr, "Error[Line: %d - File: %s]: Thread join failed!\n", QUI);
+            fprintf(stderr, "Error[Line: %d - File: %s]: Thread join failed!", QUI);
             exit(9);
         }
 
@@ -309,10 +297,7 @@ int make_prime(int hash_size)
 {
     if (is_prime(hash_size)) return hash_size;
     int p = hash_size;
-    while (!(is_prime(p)))
-    {
-        p--;
-    }
+    while (!(is_prime(p))) p--;
     return p;
 }
 
@@ -442,7 +427,7 @@ uf_t *kruskal(hash_t *ht, int num_nodes, int num_edges)
     arco **e_arr = edges_array(ht, num_edges, &edge_count);
     if (e_arr == NULL)
     {
-        fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation for e_arr failed\n", QUI);
+        fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation for e_arr failed", QUI);
         exit(1);
     }
     /* Sort our array of edges */
@@ -451,7 +436,7 @@ uf_t *kruskal(hash_t *ht, int num_nodes, int num_edges)
     uf_t *uf = init(num_nodes);
     if (uf == NULL)
     {
-        fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation for Union-Find failed\n", QUI);
+        fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation for Union-Find failed", QUI);
         free(e_arr);
         exit(2);
     }
@@ -497,13 +482,11 @@ int *connectend_components(uf_t *uf, int n)
     int *roots = malloc(sizeof(int) * (n+1));
     if (conn_comp == NULL || roots == NULL)
     {
-        fprintf(stderr, "Error[Line: %d - File: %s]Memory allocation failed for conn_comp or roots\n", QUI);
+        fprintf(stderr, "Error[Line: %d - File: %s]Memory allocation failed for conn_comp or roots", QUI);
         exit(1);
     }
 
-    for (int i = 0; i <= n; i++) roots[i] = INT_MAX;
-        
-    
+    for (int i = 0; i <= n; i++) roots[i] = INT_MAX; 
     for (int i = 0; i <= n; i++)
     {
         int r = find_op(uf, i);
@@ -525,7 +508,7 @@ int count_cc(uf_t *uf, int n)
     int *r = malloc(sizeof(int)*(n+1));
     if (r == NULL) 
     {
-        fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation for r failed!\n", QUI);
+        fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation for r failed!", QUI);
         exit(1);
     }
     memset(r, -1, sizeof(int)*(n+1));
@@ -549,7 +532,7 @@ grafo *build_graph(hash_t *ht, int nodes, int mux)
     grafo *gr = malloc(sizeof(grafo));
     if (gr == NULL)
     {
-        fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation for graph failed!\n", QUI);
+        fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation for graph failed!", QUI);
         exit(10);
     }
     
@@ -568,7 +551,7 @@ grafo *build_graph(hash_t *ht, int nodes, int mux)
     gr->cc_busy = malloc(sizeof(bool) * (nodes + 1)); 
     if (!gr->mut_gHash || !gr->cc_busy)
     {
-        fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation failed for mut_gHash or cc_busy\n", QUI);
+        fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation failed for mut_gHash or cc_busy", QUI);
         exit(10);
     }
     for (int i = 0; i < mux; i++) pthread_mutex_init(&gr->mut_gHash[i], NULL);
@@ -724,7 +707,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
         arco *a = malloc(sizeof(arco));
         if (a == NULL)
         {
-            fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation failed\n", QUI);
+            fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation failed", QUI);
             exit(1);
         }
         a->u = u;
@@ -738,7 +721,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
         elemento *a1 = malloc(sizeof(elemento));
         if (a1 == NULL) 
         {
-            fprintf(stderr, "Error[Line: %d - File :%ss]: Memory allocation for a1 in aggiungi_arco failed\n", QUI);
+            fprintf(stderr, "Error[Line: %d - File :%ss]: Memory allocation for a1 in aggiungi_arco failed", QUI);
             exit(2);
         }
         a1->id = v;
@@ -749,7 +732,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
         elemento *a2 = malloc(sizeof(elemento));
         if (a2 == NULL) 
         {
-            fprintf(stderr, "Error [Line: %d - File :%ss]: Memory allocation for a2 in aggiungi_arco\n", QUI);
+            fprintf(stderr, "Error [Line: %d - File :%ss]: Memory allocation for a2 in aggiungi_arco", QUI);
             exit(3);
         }
         a2->id = u;
@@ -784,7 +767,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
         int *q = malloc(sizeof(int) * (g->nodes + 1));
         if (!visited || !parents || !pred_weight || !q)
         {
-            fprintf(stderr, "Error [Line: %d - File :%s]: Memory allocation for visited, parents, q failed!\n", QUI);
+            fprintf(stderr, "Error [Line: %d - File :%s]: Memory allocation for visited, parents, q failed!", QUI);
             exit(4);
         }
         int h = 0;
@@ -836,7 +819,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
             arco *new_a = malloc(sizeof(arco));
             if (new_a == NULL)
             {
-                fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for new_a in aggiungi_Arco failed!\n", QUI);
+                fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for new_a in aggiungi_Arco failed!", QUI);
                 exit(5);
             }
             /* Finding the edge */
@@ -860,7 +843,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
             elemento *a1 = malloc(sizeof(elemento));
             if (a1 == NULL) 
             { 
-                fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation for a1 in aggiungi_arco failed\n", QUI); 
+                fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation for a1 in aggiungi_arco failed", QUI); 
                 exit(6); 
             }
             a1->id = v;
@@ -871,7 +854,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
             elemento *a2 = malloc(sizeof(elemento));
             if (a2 == NULL)
             { 
-                fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for a1 in aggiungi_arco failed\n", QUI); 
+                fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for a1 in aggiungi_arco failed", QUI); 
                 exit(7);
             }
             a2->id = u;
@@ -895,7 +878,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
             arco *new_a = malloc(sizeof(arco));
             if (new_a == NULL)
             {
-                fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for new_a in aggiungi_Arco failed!\n", QUI);
+                fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for new_a in aggiungi_Arco failed!", QUI);
                 exit(8);
             }
             new_a->u = u;
@@ -910,7 +893,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
             elemento *a1 = malloc(sizeof(elemento));
             if (a1 == NULL) 
             { 
-                fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for a1 in aggiungi_Arco failed\n", QUI); 
+                fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for a1 in aggiungi_Arco failed", QUI); 
                 exit(9); 
             }
             a1->id = v;
@@ -921,7 +904,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
             elemento *a2 = malloc(sizeof(elemento));
             if (a2 == NULL)
             { 
-                fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for a1 in aggiungi_Arco failed\n", QUI); 
+                fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for a1 in aggiungi_Arco failed", QUI); 
                 exit(10);
             }
             a2->id = u;
@@ -946,70 +929,44 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
     } 
 }
 
-/* Initialises a list l */
-void list_init(list_t *l)
-{
-    l->cap = 16;
-    l->size = 0;
-    l->d = malloc(sizeof(int) * l->cap);
-    if (l->d == NULL) 
-    {
-        fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation for l->d failed", QUI);
-        exit(1);
-    }
-}
-
-/* Pushes an element into the list */
-void list_push(list_t *l, int val)
-{
-    if (l->size == l->cap)
-    {
-        l->cap *= 2;
-        l->d = realloc(l->d, sizeof(int) * l->cap);
-        if (l->d == NULL)
-        {
-            fprintf(stderr, "Error[Line: %d - File: %s]: realloc failed", QUI);
-            exit(2);
-        }
-    }
-    l->d[l->size] = val;
-    l->size++;
-}
-
-/* Frees up the memory allocated for the list */
-void list_free(list_t *l) 
-{
-    free(l->d);
-}
-
 /* Utility - finds the min edge between Lu and Lv components. Returns true if an edge is found */
-bool find_min(int *nodes, int size, node *abr, grafo *g, int *min_u, int *min_v, int *min_w)
+bool find_min(node *root_iter, node *abr_other, grafo *g, int *min_u, int *min_v, int *min_w)
 {
-    bool found = false;
-    *min_w = INT_MAX;
-    for (int i = 0; i < size; i++)
+    if (root_iter == NULL) return false;
+    /* Visit leff subtree */
+    bool found = find_min(root_iter->left, abr_other, g, min_u, min_v, min_w);
+    /* Takes original id */
+    int orig_u = unshuffle(root_iter->val_node);
+    elemento *el = g->vicini[orig_u];
+    while (el != NULL)
     {
-        elemento *el = g->vicini[nodes[i]];
-        while (el != NULL)
+        if (!el->msf && abr_search(abr_other, el->id))
         {
-            if (!el->msf && abr_search(abr, el->id))
+            /* Found an edge */ 
+            if (!found || el->w < *min_w)
             {
-                /* Found an edge */ 
-                if (!found || el->w < *min_w)
-                {
-                    /* Update (u, v, w)*/
-                    *min_u = nodes[i];
-                    *min_v = el->id;
-                    *min_w = el->w;
-                    found = true;
+                /* Update (u, v, w)*/
+                *min_u = orig_u;
+                *min_v = el->id;
+                *min_w = el->w;
+                found = true;
                 }
             }
             el = el->next; 
-        } 
-    }
+        }  
+    /* Visit right subtree */
+    if (find_min(root_iter->right, abr_other, g, min_u, min_v, min_w)) found = true;
     return found;
 }
 
+/* Updates a connected components with the smallest id */
+void update_conn_comp(node *root, int *cCon, int min_id)
+{
+    if (root == NULL) return;
+    update_conn_comp(root->left, cCon, min_id);
+    cCon[unshuffle(root->val_node)] = min_id;
+    update_conn_comp(root->right, cCon, min_id);
+}
 
 /* Removes an edge from the MSF */
 int cancella_arco(grafo *g, int u, int v)
@@ -1046,12 +1003,9 @@ int cancella_arco(grafo *g, int u, int v)
 
         /* Building Lu */
         queue_t *qu = queue_init(); /* One queue is enough for both BFS */
-        /* Init list of Lu nodes */
-        list_t lu_nodes;
-        list_init(&lu_nodes);
         
         root_lu = abr_insert(root_lu, fu);
-        list_push(&lu_nodes, fu);
+        int lu_size = 1;
         enqueue(qu, fu);
 
         /* Performing BFS */
@@ -1066,17 +1020,15 @@ int cancella_arco(grafo *g, int u, int v)
                 if (ele->msf && !(abr_search(root_lu, ele->id)))
                 {
                     root_lu = abr_insert(root_lu, ele->id);
-                    list_push(&lu_nodes, ele->id);
+                    lu_size++;
                     enqueue(qu, ele->id);
                 }
                 ele = ele->next;
             }
         }
         /* Building Lv */ 
-        list_t lv_nodes;
-        list_init(&lv_nodes);
         root_lv = abr_insert(root_lv, fv);
-        list_push(&lv_nodes, fv);
+        int lv_size = 1;
         enqueue(qu, fv);
         while (!(is_empty(qu)))
         {
@@ -1089,7 +1041,7 @@ int cancella_arco(grafo *g, int u, int v)
                 if (ele->msf && !(abr_search(root_lv, ele->id)))
                 {
                     root_lv = abr_insert(root_lv, ele->id);
-                    list_push(&lv_nodes, ele->id);
+                    lv_size++;
                     enqueue(qu, ele->id);
                 }
                 ele = ele->next;
@@ -1098,26 +1050,23 @@ int cancella_arco(grafo *g, int u, int v)
         queue_destroy(qu);
 
         /* Choose the smallest size of nodes for find_min */
-        int *smallest;
-        int s;
+        node *root_iter;
         node *abr_to_search;
-        if (lu_nodes.size <= lv_nodes.size)
+        if (lu_size <= lv_size)
         {
-            smallest = lu_nodes.d;
-            s = lu_nodes.size;
+            root_iter = root_lu;
             abr_to_search = root_lv;
         }
         else 
         {
-            smallest = lv_nodes.d;
-            s = lv_nodes.size;
+            root_iter = root_lv;
             abr_to_search = root_lu;
         }
 
         int new_u = -1;
         int new_v = -1;
         int new_w = INT_MAX;
-        bool is_found = find_min(smallest, s, abr_to_search, g, &new_u, &new_v, &new_w);
+        bool is_found = find_min(root_iter, abr_to_search, g, &new_u, &new_v, &new_w);
         
         /* Getting the minimum edge */
         arco *min_edge = NULL;
@@ -1131,8 +1080,8 @@ int cancella_arco(grafo *g, int u, int v)
 
         if (min_edge == NULL) /* Edge not found: splitting components */
         {
-            for (int i = 0; i < lu_nodes.size; i++) g->cCon[lu_nodes.d[i]] = min_u;
-            for (int i = 0; i < lv_nodes.size; i++) g->cCon[lv_nodes.d[i]] = min_v;
+            update_conn_comp(root_lu, g->cCon, min_u);
+            update_conn_comp(root_lv, g->cCon, min_v);
         } 
         else /* Edge found: replacement edge does exist */
         {
@@ -1158,9 +1107,6 @@ int cancella_arco(grafo *g, int u, int v)
         pthread_mutex_unlock(&g->updates);
         free_abr(root_lu);
         free_abr(root_lv);
-        list_free(&lu_nodes);
-        list_free(&lv_nodes);
     }
-
     return DELETED;
 }
