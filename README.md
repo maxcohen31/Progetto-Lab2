@@ -48,3 +48,5 @@ Supponiamo che ci siano due thread: T1 e T2. T1 deve cancellare l'arco (2, 5) me
 - T1 e T2 se devono aggiornare le statistiche si alternano sul mutex updates.
 
 
+
+
