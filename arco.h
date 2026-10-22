@@ -16,5 +16,4 @@ typedef struct arco
     struct arco *next;
 } arco;
 
-#endif // !_arco_h
-#define _arco_h
+#endif
