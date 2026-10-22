@@ -1062,7 +1062,6 @@ int cancella_arco(grafo *g, int u, int v)
             root_iter = root_lv;
             abr_to_search = root_lu;
         }
-
         int new_u = -1;
         int new_v = -1;
         int new_w = INT_MAX;
