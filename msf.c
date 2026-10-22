@@ -1015,12 +1015,13 @@ int cancella_arco(grafo *g, int u, int v)
         while (!(is_empty(qu)))
         {
             int current_el = dequeue(qu);
+            int p = dequeue(qu);
             if (current_el < min_u) min_u = current_el;
 
             elemento *ele = g->vicini[current_el];
             while (ele != NULL)
             {
-                if (ele->msf && !(abr_search(root_lu, ele->id)))
+                if (ele->msf && p != ele->id)
                 {
                     root_lu = abr_insert(root_lu, ele->id);
                     lu_size++;
@@ -1038,12 +1039,13 @@ int cancella_arco(grafo *g, int u, int v)
         while (!(is_empty(qu)))
         {
             int current_el = dequeue(qu);
+            int p = dequeue(qu);
             if (current_el < min_v) min_v = current_el;
 
             elemento *ele = g->vicini[current_el];
             while (ele != NULL)
             {
-                if (ele->msf && !(abr_search(root_lv, ele->id)))
+                if (ele->msf && p != ele->id)
                 {
                     root_lv = abr_insert(root_lv, ele->id);
                     lv_size++;
