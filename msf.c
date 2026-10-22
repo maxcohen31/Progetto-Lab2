@@ -943,7 +943,7 @@ bool find_min(node *root_iter, node *abr_other, grafo *g, int *min_u, int *min_v
         if (!el->msf && abr_search(abr_other, el->id))
         {
             /* Found an edge */ 
-            if (!found || el->w < *min_w)
+            if (!(*found) || el->w < *min_w)
             {
                 /* Update (u, v, w)*/
                 *min_u = orig_u;
@@ -1007,8 +1007,11 @@ int cancella_arco(grafo *g, int u, int v)
         root_lu = abr_insert(root_lu, fu);
         int lu_size = 1;
         enqueue(qu, fu);
+        enqueue(qu, -1); /* fu parent */
 
-        /* Performing BFS */
+        /* Performing BFS - since we are visiting a MFS there are no cicle. 
+         * We can skip the parent and avoid visiting the same node twice. 
+         * We also avoid calling abr_search function */
         while (!(is_empty(qu)))
         {
             int current_el = dequeue(qu);
@@ -1022,6 +1025,7 @@ int cancella_arco(grafo *g, int u, int v)
                     root_lu = abr_insert(root_lu, ele->id);
                     lu_size++;
                     enqueue(qu, ele->id);
+                    enqueue(qu, current_el);
                 }
                 ele = ele->next;
             }
@@ -1030,6 +1034,7 @@ int cancella_arco(grafo *g, int u, int v)
         root_lv = abr_insert(root_lv, fv);
         int lv_size = 1;
         enqueue(qu, fv);
+        enqueue(qu, -1); /* fv parent */
         while (!(is_empty(qu)))
         {
             int current_el = dequeue(qu);
@@ -1043,6 +1048,7 @@ int cancella_arco(grafo *g, int u, int v)
                     root_lv = abr_insert(root_lv, ele->id);
                     lv_size++;
                     enqueue(qu, ele->id);
+                    enqueue(qu, current_el);
                 }
                 ele = ele->next;
             }
