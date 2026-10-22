@@ -1074,7 +1074,7 @@ int cancella_arco(grafo *g, int u, int v)
         int new_v = -1;
         int new_w = INT_MAX;
         bool found = false;
-        bool is_found = find_min(root_iter, abr_to_search, g, &new_u, &new_v, &new_w, &found);
+        bool is_found = find_min(abr_to_search, root_iter, g, &new_u, &new_v, &new_w, &found);
         
         /* Getting the minimum edge */
         arco *min_edge = NULL;
