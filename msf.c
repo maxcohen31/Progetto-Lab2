@@ -85,7 +85,7 @@ void print_graph(grafo *g);
 void free_graph(grafo *gr);
 void stats(grafo *g);
 void set_msf_neighbors(elemento *l, int idx, bool new_val);
-bool find_min(node *root_iter, node *other_abr, grafo *g, int *min_u, int *min_v, int *min_w);
+bool find_min(node *root_iter, node *other_abr, grafo *g, int *min_u, int *min_v, int *min_w, bool *found);
 void update_conn_comp(node *root, int *cCon, int min_id);
 int aggiungi_arco(grafo *g, int u, int v, int w);
 int cancella_arco(grafo *g, int u, int v);
@@ -930,11 +930,11 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
 }
 
 /* Utility - finds the min edge between Lu and Lv components. Returns true if an edge is found */
-bool find_min(node *root_iter, node *abr_other, grafo *g, int *min_u, int *min_v, int *min_w)
+bool find_min(node *root_iter, node *abr_other, grafo *g, int *min_u, int *min_v, int *min_w, bool *found)
 {
     if (root_iter == NULL) return false;
     /* Visit leff subtree */
-    bool found = find_min(root_iter->left, abr_other, g, min_u, min_v, min_w);
+    find_min(root_iter->left, abr_other, g, min_u, min_v, min_w, found);
     /* Takes original id */
     int orig_u = unshuffle(root_iter->val_node);
     elemento *el = g->vicini[orig_u];
@@ -949,13 +949,13 @@ bool find_min(node *root_iter, node *abr_other, grafo *g, int *min_u, int *min_v
                 *min_u = orig_u;
                 *min_v = el->id;
                 *min_w = el->w;
-                found = true;
-                }
+                *found = true;
             }
-            el = el->next; 
+        }
+        el = el->next; 
         }  
     /* Visit right subtree */
-    if (find_min(root_iter->right, abr_other, g, min_u, min_v, min_w)) found = true;
+    find_min(root_iter->right, abr_other, g, min_u, min_v, min_w, found);
     return found;
 }
 
@@ -1066,7 +1066,8 @@ int cancella_arco(grafo *g, int u, int v)
         int new_u = -1;
         int new_v = -1;
         int new_w = INT_MAX;
-        bool is_found = find_min(root_iter, abr_to_search, g, &new_u, &new_v, &new_w);
+        bool found = false;
+        bool is_found = find_min(root_iter, abr_to_search, g, &new_u, &new_v, &new_w, &found);
         
         /* Getting the minimum edge */
         arco *min_edge = NULL;
