@@ -952,7 +952,7 @@ bool find_min(node *abr, node *root_small, grafo *g, int old_cc ,int *min_u, int
          * - does not belong to MSF 
          * - connects to a node outside the smallest components 
          * - belongs to the original components */
-        if (!el->msf && abr_search(root_small, el->id) && g->cCon[el->id] == old_cc)
+        if (!el->msf && !abr_search(root_small, el->id) && g->cCon[el->id] == old_cc)
         {
             /* Found an edge */ 
             if (!(*found) || el->w < *min_w)
