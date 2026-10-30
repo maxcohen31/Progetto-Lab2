@@ -301,13 +301,15 @@ int make_prime(int hash_size)
     return p;
 }
 
+/* Locks the connected components for u and v. Returns the ids of the locked components */
 void lock_cc(grafo *g, int u, int v, int *lock_a, int *lock_b)
 {
     pthread_mutex_lock(&g->mu_cc_busy);
-    while (g->cc_busy[g->cCon[u]] || g->cc_busy[g->cCon[v]]) pthread_cond_wait(&g->cv_cc, &g->mu_cc_busy);
-    
+    /* Waits on cv_cc until the components of either u or v is already taken */
+    while (g->cc_busy[g->cCon[u]] || g->cc_busy[g->cCon[v]]) pthread_cond_wait(&g->cv_cc, &g->mu_cc_busy); 
     int a = g->cCon[u];
     int b = g->cCon[v];
+    /* Get the first component */
     g->cc_busy[a] = true;
     if (a != b) g->cc_busy[b] = true;  
     *lock_a = a;
@@ -315,6 +317,7 @@ void lock_cc(grafo *g, int u, int v, int *lock_a, int *lock_b)
     pthread_mutex_unlock(&g->mu_cc_busy);
 }
 
+/* Unlocks the connected components */
 void unlock_cc(grafo *g, int lock_a, int lock_b)
 {
     pthread_mutex_lock(&g->mu_cc_busy);    
@@ -323,7 +326,7 @@ void unlock_cc(grafo *g, int lock_a, int lock_b)
     pthread_cond_broadcast(&g->cv_cc);
     pthread_mutex_unlock(&g->mu_cc_busy);
 }
-
+/* Initializes the buffer shared amongst threads */
 void buffer_init(buf_t *buff)
 {
     buff->counter = 0;
@@ -333,14 +336,14 @@ void buffer_init(buf_t *buff)
     pthread_cond_init(&buff->empty, NULL);
     pthread_mutex_init(&buff->mu, NULL);
 }
-
+/* Destroy the buffer */
 void buffer_destroy(buf_t *buff)
 {
     pthread_cond_destroy(&buff->empty);
     pthread_cond_destroy(&buff->full);
     pthread_mutex_destroy(&buff->mu);
 }
-
+/* Inserts into the shared buffer the operation to perform */
 void buff_put(buf_t *buf, thread_op op)
 {
     pthread_mutex_lock(&buf->mu);
@@ -351,7 +354,7 @@ void buff_put(buf_t *buf, thread_op op)
     pthread_cond_signal(&buf->empty);
     pthread_mutex_unlock(&buf->mu);
 }
-
+/* Returns the operation from the buffer */
 thread_op buff_get(buf_t *buf)
 {
     pthread_mutex_lock(&buf->mu);
@@ -363,50 +366,52 @@ thread_op buff_get(buf_t *buf)
     pthread_mutex_unlock(&buf->mu);
     return op;
 }
-
+/* Consumer thread - It calls aggiungi_arco or cancella_arco depending on the operation got from the buffer */
 void *consumer_thread(void *arg)
 {
     thread_arg *a =  (thread_arg*)arg;
     grafo *g = a->g;
-    int r;
+    /* Result of either aggiungi_arco or cancella_arco */
+    int r; 
 
     while (true)
     {
         /* Getting the operation to perform */
         thread_op o = buff_get(a->buf);        
+        /* Execution is stopped */
         if (o.op == 'E') break;
 
-        int a;
-        int b; 
+        int first_comp;
+        int snd_comp; 
         if (o.u > g->nodes || o.v > g->nodes)
         {
             if (o.op == '+') printf("%c %d %d %d 0\n", o.op, o.u, o.v, o.w);
             else printf("%c %d %d 0\n", o.op, o.u, o.v);
             continue;
         }
-        
-        lock_cc(g, o.u, o.v, &a, &b);
+        /* Locks the components */
+        lock_cc(g, o.u, o.v, &first_comp, &snd_comp);
         if (o.op == '+') r = aggiungi_arco(g, o.u, o.v, o.w);
         else if (o.op == '-') r = cancella_arco(g, o.u, o.v);
+        /* Operation unknown */
         else 
         {
-            unlock_cc(g, a, b);
+            unlock_cc(g, first_comp, snd_comp);
             continue; 
         }
-        unlock_cc(g, a, b);
+        unlock_cc(g, first_comp, snd_comp);
 
-        if (r >= 0)
+        if (r >= 0) /* Valid operation */
         {
             if (o.op == '+') printf("%c %d %d %d %d %d %ld\n", o.op, o.u, o.v, o.w, g->edges, g->numCoCo, g->costoMSF);
             else printf("%c %d %d %d %d %ld\n", o.op, o.u, o.v, g->edges, g->numCoCo, g->costoMSF);
         }
-        else 
+        else /* Operation not valid */
         {
             if (o.op == '+') printf("%c %d %d %d 0\n", o.op, o.u, o.v, o.w);
             else printf("%c %d %d 0\n", o.op, o.u, o.v);
         } 
     }
-
     return NULL;
 }
 
@@ -424,6 +429,7 @@ int compare_edges_weight(const void *a, const void *b)
 uf_t *kruskal(hash_t *ht, int num_nodes, int num_edges)
 {
     int edge_count;
+    /* Gets the array of pointers to edges and the total amount */
     arco **e_arr = edges_array(ht, num_edges, &edge_count);
     if (e_arr == NULL)
     {
@@ -444,15 +450,17 @@ uf_t *kruskal(hash_t *ht, int num_nodes, int num_edges)
     for (int i = 0; i < edge_count; i++)
     {
         arco *a = e_arr[i];
+        /* Find the roots of u and v */
         int r_u = find_op(uf, a->u);
         int r_v = find_op(uf, a->v);
         if (r_u != r_v)
         {
+            /* Join the two components */
             union_op(uf, r_u, r_v);
+            /* The edge belongs to the MSF */
             a->msf = true;
         }
-    }
-    
+    } 
     free(e_arr);
     return uf;
 }
@@ -681,7 +689,7 @@ void stats(grafo *g)
     printf("%d %d %ld\n", edges, num_cc, msf_cst);
  
 }
-
+/* Loops over the neighbors of l and set msf fild to new_val */
 void set_msf_neighbors(elemento *l, int idx, bool new_val)
 {
     elemento *h = l;
@@ -699,12 +707,13 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
     int fu = u < v ? u : v;
     int fv = u < v ? v : u;
     arco *e_found = find_lock(g, fu, fv);
+    /* Edge not found */
     if (e_found != NULL) return ILLEGAL;
 
     /* u and v belong to different components */
     if (g->cCon[u] != g->cCon[v])
     {
-        arco *a = malloc(sizeof(arco));
+        arco *a = malloc(sizeof(*a));
         if (a == NULL)
         {
             fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation failed", QUI);
@@ -718,7 +727,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
         insert_lock(g, a);
 
         /* Building vicini[u] and vicini[v] adjacency lists */
-        elemento *a1 = malloc(sizeof(elemento));
+        elemento *a1 = malloc(sizeof(*a1));
         if (a1 == NULL) 
         {
             fprintf(stderr, "Error[Line: %d - File :%ss]: Memory allocation for a1 in aggiungi_arco failed", QUI);
@@ -729,7 +738,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
         a1->w = w;
         a1->next = NULL;
 
-        elemento *a2 = malloc(sizeof(elemento));
+        elemento *a2 = malloc(sizeof(*a2));
         if (a2 == NULL) 
         {
             fprintf(stderr, "Error [Line: %d - File :%ss]: Memory allocation for a2 in aggiungi_arco", QUI);
@@ -742,7 +751,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
         g->vicini[u] = insert_ord(g->vicini[u], a1, compare_id);
         g->vicini[v] = insert_ord(g->vicini[v], a2, compare_id);
 
-        /* Updating cCon: the new component id is the smallest node id of the two components */
+        /* Updating cCon: the new component's id is the smallest node's id of the two components */
         int id_u = g->cCon[u];
         int id_v = g->cCon[v];
         int new_id = id_u < id_v ? id_u : id_v;
@@ -816,7 +825,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
         int res; /* Result */
         if (max_w > w)
         {
-            arco *new_a = malloc(sizeof(arco));
+            arco *new_a = malloc(sizeof(*new_a));
             if (new_a == NULL)
             {
                 fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for new_a in aggiungi_Arco failed!", QUI);
@@ -840,7 +849,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
 
             insert_lock(g, new_a);
 
-            elemento *a1 = malloc(sizeof(elemento));
+            elemento *a1 = malloc(sizeof(*a1));
             if (a1 == NULL) 
             { 
                 fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation for a1 in aggiungi_arco failed", QUI); 
@@ -851,7 +860,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
             a1->w = w;
             a1->next = NULL;
             
-            elemento *a2 = malloc(sizeof(elemento));
+            elemento *a2 = malloc(sizeof(*a2));
             if (a2 == NULL)
             { 
                 fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for a1 in aggiungi_arco failed", QUI); 
@@ -875,7 +884,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
         }
         else /* max_w <= w */ 
         {
-            arco *new_a = malloc(sizeof(arco));
+            arco *new_a = malloc(sizeof(*new_a));
             if (new_a == NULL)
             {
                 fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for new_a in aggiungi_Arco failed!", QUI);
@@ -890,7 +899,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
             /* Insert the new edge into the hash table but it doesn't belong to MSF */
             insert_lock(g, new_a);
             
-            elemento *a1 = malloc(sizeof(elemento));
+            elemento *a1 = malloc(sizeof(*a1));
             if (a1 == NULL) 
             { 
                 fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for a1 in aggiungi_Arco failed", QUI); 
@@ -901,7 +910,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
             a1->w = w;
             a1->next = NULL;
             
-            elemento *a2 = malloc(sizeof(elemento));
+            elemento *a2 = malloc(sizeof(*a2));
             if (a2 == NULL)
             { 
                 fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for a1 in aggiungi_Arco failed", QUI); 
@@ -933,7 +942,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
 bool find_min(node *root_iter, node *abr_other, grafo *g, int *min_u, int *min_v, int *min_w, bool *found)
 {
     if (root_iter == NULL) return false;
-    /* Visit leff subtree */
+    /* Visit left subtree */
     find_min(root_iter->left, abr_other, g, min_u, min_v, min_w, found);
     /* Takes original id */
     int orig_u = unshuffle(root_iter->val_node);
@@ -956,7 +965,7 @@ bool find_min(node *root_iter, node *abr_other, grafo *g, int *min_u, int *min_v
         }  
     /* Visit right subtree */
     find_min(root_iter->right, abr_other, g, min_u, min_v, min_w, found);
-    return found;
+    return *found;
 }
 
 /* Updates a connected components with the smallest id */
@@ -996,7 +1005,7 @@ int cancella_arco(grafo *g, int u, int v)
         int min_u = fu;
         int min_v = fv;
         
-        /* Updates data structures: vicini and hash table */
+        /* Updates data structures vicini and hash table */
         remove_lock(g, fu, fv);
         remove_element(&g->vicini[fu], fv);
         remove_element(&g->vicini[fv], fu); 
@@ -1007,7 +1016,7 @@ int cancella_arco(grafo *g, int u, int v)
         root_lu = abr_insert(root_lu, fu);
         int lu_size = 1;
         enqueue(qu, fu);
-        enqueue(qu, -1); /* fu parent */
+        enqueue(qu, -1); /* fu's parent */
 
         /* Performing BFS - since we are visiting a MFS there are no cicle. 
          * We can skip the parent and avoid visiting the same node twice. 
@@ -1035,7 +1044,7 @@ int cancella_arco(grafo *g, int u, int v)
         root_lv = abr_insert(root_lv, fv);
         int lv_size = 1;
         enqueue(qu, fv);
-        enqueue(qu, -1); /* fv parent */
+        enqueue(qu, -1); /* fv's parent */
         while (!(is_empty(qu)))
         {
             int current_el = dequeue(qu);

@@ -21,7 +21,7 @@ hash_t *hash_t_init(int size)
         return NULL;
     }
 
-    /* set each entries to NULL */
+    /* set each entries of the list to NULL */
     for (int i = 0; i < size; i++) ht->link_l[i] = NULL;
 
     return ht;
@@ -58,11 +58,11 @@ void insert_gHash(arco **gHash, int ht_size, arco *a)
             free(a);
             return;
         }
-        
+        /* Move to the next element */
         prev = spot;
         spot = prev->next;
     }
-    /* Arc inserted at the end of the list */ 
+    /* edge inserted at the end of the list */ 
     prev->next = a; 
 }
 
@@ -104,6 +104,7 @@ void free_ht(hash_t *ht)
     free(ht);
 }
 
+/* ###### Multithreading ###### */
 arco *find_lock(grafo *g, int u, int v)
 {
     int bucket = hash(u, v, g->hash_size);

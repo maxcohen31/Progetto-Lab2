@@ -39,7 +39,7 @@ elemento *insert_ord(elemento *l, elemento *new_el, int (*cmp)(elemento*, elemen
     }
 }
 
-/* Compares two id */
+/* Compares two ids */
 int compare_id(elemento *a, elemento *b)
 {
     return a->id - b->id;
