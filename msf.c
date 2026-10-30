@@ -940,7 +940,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
 /* Utility - finds the min edge between Lu and Lv components. Returns true if an edge is found */
 bool find_min(node *abr, node *root_small, grafo *g, int old_cc ,int *min_u, int *min_v, int *min_w, bool *found)
 {
-    if (root_iter == NULL) return *found;
+    if (abr == NULL) return *found;
     /* Visit left subtree */
     find_min(abr->left, root_small, g, old_cc, min_u, min_v, min_w, found);
     /* Takes original id */
@@ -952,7 +952,7 @@ bool find_min(node *abr, node *root_small, grafo *g, int old_cc ,int *min_u, int
          * - does not belong to MSF 
          * - connects to a node outside the smallest components 
          * - belongs to the original components */
-        if (!el->msf && abr_search(abr_other, el->id) && g->cCon[el->id] == old_cc)
+        if (!el->msf && abr_search(root_small, el->id) && g->cCon[el->id] == old_cc)
         {
             /* Found an edge */ 
             if (!(*found) || el->w < *min_w)
@@ -1150,12 +1150,53 @@ int cancella_arco(grafo *g, int u, int v)
             int norm_b = (new_u < new_v) ? new_v : new_u;
             min_edge = find_lock(g, norm_a, norm_b);
         }
-
         if (min_edge == NULL) /* Edge not found: splitting components */
         {
-            update_conn_comp(root_lu, g->cCon, min_u);
-            update_conn_comp(root_lv, g->cCon, min_v);
-        } 
+            bool find_min_id = abr_search(smallest_abr, old_cc);
+            /* If the original minuìimum belongs to the smallest component
+             * the BFS of the largest component must be completed */
+            if (find_min_id)
+            {
+                while (!is_empty(largest_queue))
+                {
+                    int cur = dequeue(largest_queue);
+                    int p = dequeue(largest_queue);
+                    if (cur < min_largest_comp) min_largest_comp = cur;
+                    elemento *e = g->vicini[cur];
+                    while (e != NULL)
+                    {
+                        if (e->msf && p != e->id)
+                        {
+                            /* Check for capacity */
+                            if (largest_size == largest_capacity)
+                            {
+                                int new_capacity = 2*largest_capacity;
+                                nodes_largest_comp = realloc(nodes_largest_comp, new_capacity*sizeof(int)); 
+                                if (small_comp) node_v = nodes_largest_comp;
+                                else node_u = nodes_largest_comp;
+                                if (nodes_largest_comp == NULL)
+                                {
+                                    fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation failed", QUI);
+                                    exit(12);
+                                }
+                                largest_capacity = new_capacity;
+                            }
+                            nodes_largest_comp[largest_size++] = e->id;
+                            enqueue(largest_queue, e->id);
+                            enqueue(largest_queue, cur);
+                        }
+                        e = e->next;
+                    }
+                }
+            }
+            /* Updating the id of the smaller component */
+            for (int i = 0; i < small_size; i++) g->cCon[nodes_smallest_comp[i]] = min_small_comp;
+            /* Updating the id of the largest component if necessary */
+            if (find_min_id)
+            {
+                for (int i = 0; i < largest_size; i++) g->cCon[nodes_largest_comp[i]] = min_largest_comp;
+            }
+        }
         else /* Edge found: replacement edge does exist */
         {
             int bucket_min = hash(min_edge->u, min_edge->v, g->hash_size);
