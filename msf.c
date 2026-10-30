@@ -85,8 +85,7 @@ void print_graph(grafo *g);
 void free_graph(grafo *gr);
 void stats(grafo *g);
 void set_msf_neighbors(elemento *l, int idx, bool new_val);
-bool find_min(node *root_iter, node *other_abr, grafo *g, int *min_u, int *min_v, int *min_w, bool *found);
-void update_conn_comp(node *root, int *cCon, int min_id);
+bool find_min(node *abr, node* root_small, grafo*g, int old_cc, int *min_u, int *min_v, int *min_w, bool *found);
 int aggiungi_arco(grafo *g, int u, int v, int w);
 int cancella_arco(grafo *g, int u, int v);
 
@@ -939,22 +938,26 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
 }
 
 /* Utility - finds the min edge between Lu and Lv components. Returns true if an edge is found */
-bool find_min(node *root_iter, node *abr_other, grafo *g, int *min_u, int *min_v, int *min_w, bool *found)
+bool find_min(node *abr, node *root_small, grafo *g, int old_cc ,int *min_u, int *min_v, int *min_w, bool *found)
 {
-    if (root_iter == NULL) return false;
+    if (root_iter == NULL) return *found;
     /* Visit left subtree */
-    find_min(root_iter->left, abr_other, g, min_u, min_v, min_w, found);
+    find_min(abr->left, root_small, g, old_cc, min_u, min_v, min_w, found);
     /* Takes original id */
     int orig_u = unshuffle(root_iter->val_node);
     elemento *el = g->vicini[orig_u];
     while (el != NULL)
     {
-        if (!el->msf && abr_search(abr_other, el->id))
+        /* Check whether the edge cross the cut
+         * - does not belong to MSF 
+         * - connects to a node outside the smallest components 
+         * - belongs to the original components */
+        if (!el->msf && abr_search(abr_other, el->id) && g->cCon[el->id] == old_cc)
         {
             /* Found an edge */ 
             if (!(*found) || el->w < *min_w)
             {
-                /* Update (u, v, w)*/
+                /* Update edge with minimum weight found */
                 *min_u = orig_u;
                 *min_v = el->id;
                 *min_w = el->w;
@@ -964,19 +967,9 @@ bool find_min(node *root_iter, node *abr_other, grafo *g, int *min_u, int *min_v
         el = el->next; 
         }  
     /* Visit right subtree */
-    find_min(root_iter->right, abr_other, g, min_u, min_v, min_w, found);
+    find_min(abr->right, root_small , g, old_cc, min_u, min_v, min_w, found);
     return *found;
 }
-
-/* Updates a connected components with the smallest id */
-void update_conn_comp(node *root, int *cCon, int min_id)
-{
-    if (root == NULL) return;
-    update_conn_comp(root->left, cCon, min_id);
-    cCon[unshuffle(root->val_node)] = min_id;
-    update_conn_comp(root->right, cCon, min_id);
-}
-
 /* Removes an edge from the MSF */
 int cancella_arco(grafo *g, int u, int v)
 {
@@ -996,95 +989,158 @@ int cancella_arco(grafo *g, int u, int v)
         pthread_mutex_unlock(&g->updates);
         return DELETED;
     }
-    /* Edge is in MSF */
-    else 
+    /* Edge is in the MSF */
+    else
     {
-        int old_w = edge->weight; /* Used later to update costoMSF */
-        node *root_lu = NULL; /* Lu is our first root */
-        node *root_lv = NULL; /*  Lv is our second root */
-        int min_u = fu;
-        int min_v = fv;
-        
-        /* Updates data structures vicini and hash table */
+        int old_w = edge->weight;
+        int old_cc = g->cCon[fu]; /* Used by find_min */
+
+        /* Remove the edge from the hash table and adjacency lists */
         remove_lock(g, fu, fv);
         remove_element(&g->vicini[fu], fv);
-        remove_element(&g->vicini[fv], fu); 
-
-        /* Building Lu */
-        queue_t *qu = queue_init(); /* One queue is enough for both BFS */
+        remove_element(&g->vicini[fv], fu);
         
-        root_lu = abr_insert(root_lu, fu);
-        int lu_size = 1;
+        int min_u = fu;
+        int min_v = fv;
+
+        /* BFS queues */
+        queue_t *qu = queue_init();
+        queue_t *qv = queue_init();
+
+        int initial_size = 10;
+        int cap_u = initial_size;
+        int cap_v = initial_size;
+        int inserted_u = 1;
+        int inserted_v = 1;
+        /* Keeping track of the nodes of both components */
+        int *node_u = malloc(sizeof(int) * initial_size);
+        int *node_v = malloc(sizeof(int) * initial_size);
+        if (!node_u || !node_v) 
+        {
+            fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation failed", QUI);
+            exit(10);
+            queue_destroy(qu);
+            queue_destroy(qv);
+        }
+
+        node_u[0] = fu;
+        node_v[0] = fv;
+
         enqueue(qu, fu);
         enqueue(qu, -1); /* fu's parent */
-
-        /* Performing BFS - since we are visiting a MFS there are no cicle. 
-         * We can skip the parent and avoid visiting the same node twice. 
-         * We also avoid calling abr_search function */
-        while (!(is_empty(qu)))
+        enqueue(qv, fv);
+        enqueue(qv, -1); /* fv's parent */
+        /* Alternating BFS */
+        while (!is_empty(qu) && !is_empty(qv))
         {
-            int current_el = dequeue(qu);
-            int p = dequeue(qu);
-            if (current_el < min_u) min_u = current_el;
+            int current_u = dequeue(qu);
+            int parent_u = dequeue(qu);
+            if (current_u < min_u) min_u = current_u;
 
-            elemento *ele = g->vicini[current_el];
+            elemento *ele = g->vicini[current_u];
             while (ele != NULL)
             {
-                if (ele->msf && p != ele->id)
+                if (ele->msf && ele->id != parent_u)
                 {
-                    root_lu = abr_insert(root_lu, ele->id);
-                    lu_size++;
+                    /* Check node_u capacity */
+                    if (inserted_u == cap_u)
+                    {
+                        int new_cap_u = cap_u * 2;
+                        node_u = realloc(node_u, sizeof(int)*new_cap_u);
+                        if (node_u == NULL)
+                        {
+                            fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation failed", QUI);
+                            exit(11);
+                        }
+                        cap_u = new_cap_u;
+                    }
+                    node_u[inserted_u++] = ele->id;
                     enqueue(qu, ele->id);
-                    enqueue(qu, current_el);
+                    enqueue(qu, current_u);
                 }
+                /* Keep exploring vicini u */
+                ele = ele->next;
+            }
+            int current_v = dequeue(qv);
+            int parent_v = dequeue(qv);
+            if (current_v < min_v) min_v = current_v;
+
+            ele = g->vicini[current_v];
+            while (ele != NULL)
+            {
+                if (ele->msf && ele->id != parent_v)
+                {
+                    /* Check node_u capacity */
+                    if (inserted_v == cap_v)
+                    {
+                        int new_cap_v = cap_v * 2;
+                        node_v = realloc(node_v, new_cap_v*sizeof(int));
+                        if (node_v == NULL)
+                        {
+                            fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation failed", QUI);
+                            exit(11);
+                        }
+                        cap_v = new_cap_v;
+                    }
+                    node_v[inserted_v++] = ele->id;
+                    enqueue(qv, ele->id);
+                    enqueue(qv, current_v);
+                }
+                /* Keep exploring vicini v */
                 ele = ele->next;
             }
         }
-        /* Building Lv */ 
-        root_lv = abr_insert(root_lv, fv);
-        int lv_size = 1;
-        enqueue(qu, fv);
-        enqueue(qu, -1); /* fv's parent */
-        while (!(is_empty(qu)))
+        bool small_comp = is_empty(qu);
+        int small_size;
+        int largest_size;
+        int *nodes_smallest_comp;
+        int *nodes_largest_comp;
+        int min_small_comp;
+        int min_largest_comp;
+        int largest_capacity;
+        queue_t *largest_queue;
+        if (small_comp) 
         {
-            int current_el = dequeue(qu);
-            int p = dequeue(qu);
-            if (current_el < min_v) min_v = current_el;
-
-            elemento *ele = g->vicini[current_el];
-            while (ele != NULL)
-            {
-                if (ele->msf && p != ele->id)
-                {
-                    root_lv = abr_insert(root_lv, ele->id);
-                    lv_size++;
-                    enqueue(qu, ele->id);
-                    enqueue(qu, current_el);
-                }
-                ele = ele->next;
-            }
-        } 
-        queue_destroy(qu);
-
-        /* Choose the smallest size of nodes for find_min */
-        node *root_iter;
-        node *abr_to_search;
-        if (lu_size <= lv_size)
-        {
-            root_iter = root_lu;
-            abr_to_search = root_lv;
+            nodes_smallest_comp = node_u;
+            nodes_largest_comp = node_v;
+            small_size = inserted_u;
+            largest_size = inserted_v;
+            min_small_comp = min_u;
+            min_largest_comp = min_v;
+            largest_queue = qv;
+            largest_capacity = cap_v;
         }
         else 
         {
-            root_iter = root_lv;
-            abr_to_search = root_lu;
+            nodes_smallest_comp = node_v;
+            nodes_largest_comp = node_u;
+            small_size = inserted_v;
+            largest_size = inserted_u;
+            min_small_comp = min_v;
+            min_largest_comp = min_u;
+            largest_queue = qu;
+            largest_capacity = cap_u;
         }
+
+        /* Building the smaller abr */
+        node *smallest_abr = NULL;
+        for (int i = 0; i < small_size; i++) smallest_abr = abr_insert(smallest_abr, nodes_smallest_comp[i]);
+ 
         int new_u = -1;
         int new_v = -1;
         int new_w = INT_MAX;
         bool found = false;
-        bool is_found = find_min(root_iter, abr_to_search, g, &new_u, &new_v, &new_w, &found);
-        
+        bool is_found = find_min(smallest_abr, smallest_abr, g, old_cc, &new_u, &new_v, &new_w, &found);
+        /* Retrieve the replacement edge from the hash table */
+        arco *min_edge = NULL;
+        if (is_found) 
+        {
+            /* Normalize edges */
+            int norm_a = new_u < new_v ? new_u : new_v;
+            int norm_b = new_u < new_v ? new_v : new_u;
+            min_edge = find_lock(g, norm_a, norm_b);
+        }
+
         /* Getting the minimum edge */
         arco *min_edge = NULL;
         if (is_found)
@@ -1122,8 +1178,11 @@ int cancella_arco(grafo *g, int u, int v)
         }
         else g->costoMSF = g->costoMSF + (min_edge->weight - old_w);
         pthread_mutex_unlock(&g->updates);
-        free_abr(root_lu);
-        free_abr(root_lv);
+        free_abr(smallest_abr);
+        queue_destroy(qu);
+        queue_destroy(qv);
+        free(node_u);
+        free(node_v);
     }
     return DELETED;
 }
