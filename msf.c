@@ -944,7 +944,7 @@ bool find_min(node *abr, node *root_small, grafo *g, int old_cc ,int *min_u, int
     /* Visit left subtree */
     find_min(abr->left, root_small, g, old_cc, min_u, min_v, min_w, found);
     /* Takes original id */
-    int orig_u = unshuffle(root_iter->val_node);
+    int orig_u = unshuffle(abr->val_node);
     elemento *el = g->vicini[orig_u];
     while (el != NULL)
     {
@@ -1142,7 +1142,6 @@ int cancella_arco(grafo *g, int u, int v)
         }
 
         /* Getting the minimum edge */
-        arco *min_edge = NULL;
         if (is_found)
         {
             /* Normalizing edges */
