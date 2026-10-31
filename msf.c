@@ -85,7 +85,7 @@ void print_graph(grafo *g);
 void free_graph(grafo *gr);
 void stats(grafo *g);
 void set_msf_neighbors(elemento *l, int idx, bool new_val);
-bool find_min(node *abr, node* root_small, grafo*g, int old_cc, int *min_u, int *min_v, int *min_w, bool *found);
+bool find_min(node *abr, node* root_small, grafo*g, int *min_u, int *min_v, int *min_w, bool *found);
 int aggiungi_arco(grafo *g, int u, int v, int w);
 int cancella_arco(grafo *g, int u, int v);
 
@@ -938,11 +938,11 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
 }
 
 /* Utility - finds the min edge between Lu and Lv components. Returns true if an edge is found */
-bool find_min(node *abr, node *root_small, grafo *g, int old_cc ,int *min_u, int *min_v, int *min_w, bool *found)
+bool find_min(node *abr, node *root_small, grafo *g, int *min_u, int *min_v, int *min_w, bool *found)
 {
     if (abr == NULL) return *found;
     /* Visit left subtree */
-    find_min(abr->left, root_small, g, old_cc, min_u, min_v, min_w, found);
+    find_min(abr->left, root_small, g, min_u, min_v, min_w, found);
     /* Takes original id */
     int orig_u = unshuffle(abr->val_node);
     elemento *el = g->vicini[orig_u];
@@ -950,9 +950,14 @@ bool find_min(node *abr, node *root_small, grafo *g, int old_cc ,int *min_u, int
     {
         /* Check whether the edge cross the cut
          * - does not belong to MSF 
+<<<<<<< HEAD
          * - connects to a node outside the smallest components 
          * - belongs to the original components */
         if (!el->msf && !abr_search(root_small, el->id) && g->cCon[el->id] == old_cc)
+=======
+         * - connects to a node outside the smallest components */
+        if (!el->msf && abr_search(root_small, el->id))
+>>>>>>> cf2b1d7 (fix: find_min)
         {
             /* Found an edge */ 
             if (!(*found) || el->w < *min_w)
@@ -967,7 +972,7 @@ bool find_min(node *abr, node *root_small, grafo *g, int old_cc ,int *min_u, int
         el = el->next; 
         }  
     /* Visit right subtree */
-    find_min(abr->right, root_small , g, old_cc, min_u, min_v, min_w, found);
+    find_min(abr->right, root_small, g, min_u, min_v, min_w, found);
     return *found;
 }
 /* Removes an edge from the MSF */
@@ -1019,8 +1024,6 @@ int cancella_arco(grafo *g, int u, int v)
         {
             fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation failed", QUI);
             exit(10);
-            queue_destroy(qu);
-            queue_destroy(qv);
         }
 
         node_u[0] = fu;
@@ -1099,6 +1102,7 @@ int cancella_arco(grafo *g, int u, int v)
         int min_largest_comp;
         int largest_capacity;
         queue_t *largest_queue;
+        /* Selecting the smalleer component then builds the abr */
         if (small_comp) 
         {
             nodes_smallest_comp = node_u;
@@ -1152,7 +1156,7 @@ int cancella_arco(grafo *g, int u, int v)
         if (min_edge == NULL) /* Edge not found: splitting components */
         {
             bool find_min_id = abr_search(smallest_abr, old_cc);
-            /* If the original minuìimum belongs to the smallest component
+            /* If the original minimum belongs to the smallest component
              * the BFS of the largest component must be completed */
             if (find_min_id)
             {
