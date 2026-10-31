@@ -950,14 +950,9 @@ bool find_min(node *abr, node *root_small, grafo *g, int *min_u, int *min_v, int
     {
         /* Check whether the edge cross the cut
          * - does not belong to MSF 
-<<<<<<< HEAD
          * - connects to a node outside the smallest components 
-         * - belongs to the original components */
-        if (!el->msf && !abr_search(root_small, el->id) && g->cCon[el->id] == old_cc)
-=======
-         * - connects to a node outside the smallest components */
-        if (!el->msf && abr_search(root_small, el->id))
->>>>>>> cf2b1d7 (fix: find_min)
+         */
+        if (!el->msf && !abr_search(root_small, el->id))
         {
             /* Found an edge */ 
             if (!(*found) || el->w < *min_w)
@@ -1134,7 +1129,7 @@ int cancella_arco(grafo *g, int u, int v)
         int new_v = -1;
         int new_w = INT_MAX;
         bool found = false;
-        bool is_found = find_min(smallest_abr, smallest_abr, g, old_cc, &new_u, &new_v, &new_w, &found);
+        bool is_found = find_min(smallest_abr, smallest_abr, g, &new_u, &new_v, &new_w, &found);
         /* Retrieve the replacement edge from the hash table */
         arco *min_edge = NULL;
         if (is_found) 
