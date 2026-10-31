@@ -1,12 +1,15 @@
 # Costruzione di Lu e Lv
+La costruzione di Lu e Lv tramite alberi binari di ricerca ha rappresentato un bottleneck. Come suggerito nel forum dedicato al progetto 
+viene eseguita una visita alternata della MSF. Viene dunque di fatto costruito un unico ABR che rappresenta la componente più piccola. 
 
-### Lu
-Per la costruzione di Lu e Lv la funzione cancella_arco esegue una BFS, cioè una visita in ampiezza del grafo g. Per la bfs si utilizza una coda; definita in queue.h. 
-La variabile root_lu rappresenta la radice dell'albero binario di ricerca che verrà costruito durante la visita. Il controllo (ele->msf == true && !(abr_search(root_lu, ele->id))) garantisce che un arco appartiene alla MSF e che un nodo già visitito venga inserito nuovamente nell'albero.
-Alla fine della visita lu_root contiene tutti i nodi raggiungibili da u attraverso archi della MFS.
-
-### Lv
-La costruzione di Lv è analoga a quella per Lu.
+# Note sulla cancella_arco
+La cancella_arco fa due cose: 
+  - Se l'arco non fa parte della MSF lo rimuove dalla tabella hash e dalle liste di adiacenza
+  - Se l'arco fa parte della MSF fa una visita alternata e trova la componente più piccola e da essa costruisce l'albero binario di ricerca.
+    Per trovare un arco candidato la cancella_arco utilizza la funzione find_min che cerca ricorsivamente un arco che connette le componenti.
+        - Se l'arco viene trovato la cancella_arco lo inserisce nella MSF e aggiorna le liste di adiacenza e il costo della MSF.
+        - Altrimenti la componente si divide: se il minimo id originale fa parte della componente più piccola, si finisce la visita fatta in precedenza 
+          e aggiorniamo la componente più grande con il minimo id trovato. Se l'id fa già parte della componente grande semplicemente si fa l'aggiornamento.
 
 
 # Sincronizzazione
