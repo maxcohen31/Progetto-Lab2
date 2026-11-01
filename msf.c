@@ -536,16 +536,17 @@ int count_cc(uf_t *uf, int n)
 /* Builds an undirected graph */
 grafo *build_graph(hash_t *ht, int nodes, int mux)
 {
-    grafo *gr = malloc(sizeof(grafo));
+    grafo *gr = malloc(sizeof(*gr));
     if (gr == NULL)
     {
         fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation for graph failed!", QUI);
         exit(10);
     }
-    
-    uf_t *uf = kruskal(ht, nodes, count_edges(ht));
+   
+    int tot_edges = count_edges(ht);
+    uf_t *uf = kruskal(ht, nodes, tot_edges);
     gr->costoMSF = msf_cost(ht);
-    gr->edges = count_edges(ht);
+    gr->edges = tot_edges;
     gr->vicini = get_neighbors(ht, nodes);
     gr->cCon = connectend_components(uf, nodes);
     gr->numCoCo = count_cc(uf, nodes);
