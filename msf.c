@@ -113,7 +113,7 @@ int main(int argc, char **argv)
                 nmutex = atoi(optarg);
                 break;  
             case '?':
-                fprintf(stderr, "Argument not recognized");
+                fprintf(stderr, "Argument not recognized\n");
                 break;
             default:
                 break; 
@@ -122,13 +122,13 @@ int main(int argc, char **argv)
     /* Check if there are more than two arguments */
     if (argc - optind < 2)
     {
-        fprintf(stderr, "Usage:\t%s file_grafo file_archi -t [n_threads] -H [hashsize] -M [nmutex]\nUsage: (optional arguments): msf.out file_grafo file_archi", argv[0]);
+        fprintf(stderr, "Usage:\t%s file_grafo file_archi -t [n_threads] -H [hashsize] -M [nmutex]\nUsage: (optional arguments): msf.out file_grafo file_archi\n", argv[0]);
         exit(1);
     }
     FILE *f = fopen(argv[optind], "r");
     if (f == NULL)
     {
-        fprintf(stderr, "Error[Line: %d File: %s] opening file", QUI);
+        fprintf(stderr, "Error[Line: %d File: %s] opening file\n", QUI);
         exit(2);
     }
 
@@ -149,7 +149,7 @@ int main(int argc, char **argv)
             int e = sscanf(line, "p sp %d %d", &num_node, &num_edge);
             if (e != 2) 
             {
-                fprintf(stderr, "Error [Line: %d - File: %s]: line format not valid!", QUI);
+                fprintf(stderr, "Error [Line: %d - File: %s]: line format not valid!\n", QUI);
                 exit(3);
             } 
             /* Initializes the hast table */
@@ -163,14 +163,14 @@ int main(int argc, char **argv)
             int e = sscanf(line, "a %d %d %d", &u, &v, &w);
             if (e != 3) 
             {
-                fprintf(stderr, "Error[Line: %d - File: %s]: line format not valid", QUI);
+                fprintf(stderr, "Error[Line: %d - File: %s]: line format not valid\n", QUI);
                 exit(4);
             }
             /* Building the hash table */
             arco *arc = malloc(sizeof(arco));
             if (arc == NULL)
             {
-                fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation for arc failed!", QUI);
+                fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation for arc failed!\n", QUI);
                 exit(5);
             }
             arc->u = u;
@@ -191,7 +191,7 @@ int main(int argc, char **argv)
     thread_arg *arg = malloc(sizeof(*arg) * thread_num);
     if (!th_arr || !arg)
     {
-        fprintf(stderr, "Error[Line: %d - File: %s]: allocation for th_arr or arg arrays failed!", QUI);
+        fprintf(stderr, "Error[Line: %d - File: %s]: allocation for th_arr or arg arrays failed!\n", QUI);
         exit(6);
     }
     buf_t shared_buf;
@@ -206,7 +206,7 @@ int main(int argc, char **argv)
     {
         if (pthread_create(&th_arr[i], NULL, consumer_thread, &arg[i]) != 0)
         {
-            fprintf(stderr, "Error[Line: %d - File: %s]: Creation of threads failed", QUI);                
+            fprintf(stderr, "Error[Line: %d - File: %s]: Creation of threads failed\n", QUI);                
             exit(7);
         }
     }
@@ -214,7 +214,7 @@ int main(int argc, char **argv)
     FILE *file_op = fopen(argv[optind + 1], "r");
     if (file_op == NULL)
     {
-        fprintf(stderr, "Error[Line: %d - File: %s]: failed to open file_op", QUI);
+        fprintf(stderr, "Error[Line: %d - File: %s]: failed to open file_op\n", QUI);
         exit(8);
     }
 
@@ -265,7 +265,7 @@ int main(int argc, char **argv)
     {
         if (pthread_join(th_arr[i], NULL) != 0)
         {
-            fprintf(stderr, "Error[Line: %d - File: %s]: Thread join failed!", QUI);
+            fprintf(stderr, "Error[Line: %d - File: %s]: Thread join failed!\n", QUI);
             exit(9);
         }
 
@@ -377,7 +377,7 @@ void *consumer_thread(void *arg)
     {
         /* Getting the operation to perform */
         thread_op o = buff_get(a->buf);        
-        /* Execution is stopped */
+        /* Execution stopped */
         if (o.op == 'E') break;
 
         int first_comp;
@@ -432,7 +432,7 @@ uf_t *kruskal(hash_t *ht, int num_nodes, int num_edges)
     arco **e_arr = edges_array(ht, num_edges, &edge_count);
     if (e_arr == NULL)
     {
-        fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation for e_arr failed", QUI);
+        fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation for e_arr failed\n", QUI);
         exit(1);
     }
     /* Sort our array of edges */
@@ -441,7 +441,7 @@ uf_t *kruskal(hash_t *ht, int num_nodes, int num_edges)
     uf_t *uf = init(num_nodes);
     if (uf == NULL)
     {
-        fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation for Union-Find failed", QUI);
+        fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation for Union-Find failed\n", QUI);
         free(e_arr);
         exit(2);
     }
@@ -489,7 +489,7 @@ int *connectend_components(uf_t *uf, int n)
     int *roots = malloc(sizeof(int) * (n+1));
     if (conn_comp == NULL || roots == NULL)
     {
-        fprintf(stderr, "Error[Line: %d - File: %s]Memory allocation failed for conn_comp or roots", QUI);
+        fprintf(stderr, "Error[Line: %d - File: %s]Memory allocation failed for conn_comp or roots\n", QUI);
         exit(1);
     }
 
@@ -515,11 +515,11 @@ int count_cc(uf_t *uf, int n)
     int *r = malloc(sizeof(int)*(n+1));
     if (r == NULL) 
     {
-        fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation for r failed!", QUI);
+        fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation for r failed!\n", QUI);
         exit(1);
     }
-    memset(r, -1, sizeof(int)*(n+1));
-
+    /* Set to -1 the  */
+    for (int i = 0; i <= n; i++) r[i] = -1;
     for (int i = 0; i <= n; i++)
     {
         int val = find_op(uf, i);
@@ -539,7 +539,7 @@ grafo *build_graph(hash_t *ht, int nodes, int mux)
     grafo *gr = malloc(sizeof(*gr));
     if (gr == NULL)
     {
-        fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation for graph failed!", QUI);
+        fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation for graph failed!\n", QUI);
         exit(10);
     }
    
@@ -559,7 +559,7 @@ grafo *build_graph(hash_t *ht, int nodes, int mux)
     gr->cc_busy = malloc(sizeof(bool) * (nodes + 1)); 
     if (!gr->mut_gHash || !gr->cc_busy)
     {
-        fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation failed for mut_gHash or cc_busy", QUI);
+        fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation failed for mut_gHash or cc_busy\n", QUI);
         exit(10);
     }
     for (int i = 0; i < mux; i++) pthread_mutex_init(&gr->mut_gHash[i], NULL);
@@ -716,7 +716,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
         arco *a = malloc(sizeof(*a));
         if (a == NULL)
         {
-            fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation failed", QUI);
+            fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation failed\n", QUI);
             exit(1);
         }
         a->u = u;
@@ -730,7 +730,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
         elemento *a1 = malloc(sizeof(*a1));
         if (a1 == NULL) 
         {
-            fprintf(stderr, "Error[Line: %d - File :%ss]: Memory allocation for a1 in aggiungi_arco failed", QUI);
+            fprintf(stderr, "Error[Line: %d - File :%ss]: Memory allocation for a1 in aggiungi_arco failed\n", QUI);
             exit(2);
         }
         a1->id = v;
@@ -741,7 +741,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
         elemento *a2 = malloc(sizeof(*a2));
         if (a2 == NULL) 
         {
-            fprintf(stderr, "Error [Line: %d - File :%ss]: Memory allocation for a2 in aggiungi_arco", QUI);
+            fprintf(stderr, "Error [Line: %d - File :%ss]: Memory allocation for a2 in aggiungi_arco\n", QUI);
             exit(3);
         }
         a2->id = u;
@@ -776,7 +776,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
         int *q = malloc(sizeof(int) * (g->nodes + 1));
         if (!visited || !parents || !pred_weight || !q)
         {
-            fprintf(stderr, "Error [Line: %d - File :%s]: Memory allocation for visited, parents, q failed!", QUI);
+            fprintf(stderr, "Error [Line: %d - File :%s]: Memory allocation for visited, parents, q failed!\n", QUI);
             exit(4);
         }
         int h = 0;
@@ -828,7 +828,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
             arco *new_a = malloc(sizeof(*new_a));
             if (new_a == NULL)
             {
-                fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for new_a in aggiungi_Arco failed!", QUI);
+                fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for new_a in aggiungi_Arco failed!\n", QUI);
                 exit(5);
             }
             /* Finding the edge */
@@ -852,7 +852,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
             elemento *a1 = malloc(sizeof(*a1));
             if (a1 == NULL) 
             { 
-                fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation for a1 in aggiungi_arco failed", QUI); 
+                fprintf(stderr, "Error[Line: %d - File: %s]: Memory allocation for a1 in aggiungi_arco failed\n", QUI); 
                 exit(6); 
             }
             a1->id = v;
@@ -863,7 +863,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
             elemento *a2 = malloc(sizeof(*a2));
             if (a2 == NULL)
             { 
-                fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for a1 in aggiungi_arco failed", QUI); 
+                fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for a1 in aggiungi_arco failed\n", QUI); 
                 exit(7);
             }
             a2->id = u;
@@ -887,7 +887,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
             arco *new_a = malloc(sizeof(*new_a));
             if (new_a == NULL)
             {
-                fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for new_a in aggiungi_Arco failed!", QUI);
+                fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for new_a in aggiungi_Arco failed!\n", QUI);
                 exit(8);
             }
             new_a->u = u;
@@ -902,7 +902,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
             elemento *a1 = malloc(sizeof(*a1));
             if (a1 == NULL) 
             { 
-                fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for a1 in aggiungi_Arco failed", QUI); 
+                fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for a1 in aggiungi_Arco failed\n", QUI); 
                 exit(9); 
             }
             a1->id = v;
@@ -913,7 +913,7 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
             elemento *a2 = malloc(sizeof(*a2));
             if (a2 == NULL)
             { 
-                fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for a1 in aggiungi_Arco failed", QUI); 
+                fprintf(stderr, "Error [Line: %d - File: %s]: Memory allocation for a1 in aggiungi_Arco failed\n", QUI); 
                 exit(10);
             }
             a2->id = u;
@@ -1018,7 +1018,7 @@ int cancella_arco(grafo *g, int u, int v)
         int *node_v = malloc(sizeof(int) * initial_size);
         if (!node_u || !node_v) 
         {
-            fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation failed", QUI);
+            fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation failed\n", QUI);
             exit(10);
         }
 
@@ -1048,7 +1048,7 @@ int cancella_arco(grafo *g, int u, int v)
                         node_u = realloc(node_u, sizeof(int)*new_cap_u);
                         if (node_u == NULL)
                         {
-                            fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation failed", QUI);
+                            fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation failed\n", QUI);
                             exit(11);
                         }
                         cap_u = new_cap_u;
@@ -1076,7 +1076,7 @@ int cancella_arco(grafo *g, int u, int v)
                         node_v = realloc(node_v, new_cap_v*sizeof(int));
                         if (node_v == NULL)
                         {
-                            fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation failed", QUI);
+                            fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation failed\n", QUI);
                             exit(11);
                         }
                         cap_v = new_cap_v;
@@ -1175,7 +1175,7 @@ int cancella_arco(grafo *g, int u, int v)
                                 else node_u = nodes_largest_comp;
                                 if (nodes_largest_comp == NULL)
                                 {
-                                    fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation failed", QUI);
+                                    fprintf(stderr, "Error[Line: %d - File: %s]: memory allocation failed\n", QUI);
                                     exit(12);
                                 }
                                 largest_capacity = new_capacity;
