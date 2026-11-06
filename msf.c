@@ -1150,8 +1150,8 @@ int cancella_arco(grafo *g, int u, int v)
                 new_u = new_v;
                 new_v = tmp;
             }
+            min_edge = find_lock(g, new_u, new_v);
         }
-        min_edge = find_lock(g, new_u, new_v);
         if (min_edge == NULL) /* Edge not found: splitting components */
         {
             bool find_min_id = abr_search(smallest_abr, old_cc);
