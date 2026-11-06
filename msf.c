@@ -703,10 +703,14 @@ void set_msf_neighbors(elemento *l, int idx, bool new_val)
 /* Adds an edge to the graph */
 int aggiungi_arco(grafo *g, int u, int v, int w)
 {
-    /* Edge already exists */
-    int fu = u < v ? u : v;
-    int fv = u < v ? v : u;
-    arco *e_found = find_lock(g, fu, fv);
+    /* Normalizing the edge */
+    if (u > v)
+    {
+        int tmp = u;
+        u = v;
+        v = tmp;
+    }
+    arco *e_found = find_lock(g, u, v);
     /* Edge not found */
     if (e_found != NULL) return ILLEGAL;
 
@@ -832,14 +836,14 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
                 exit(5);
             }
             /* Finding the edge */
-            int fu = (max_edge_u < max_edge_v) ? max_edge_u : max_edge_v;
-            int fv = (max_edge_u < max_edge_v) ? max_edge_v : max_edge_u;
-            arco *a_found = find_lock(g, fu, fv);
+            int u = (max_edge_u < max_edge_v) ? max_edge_u : max_edge_v;
+            int v = (max_edge_u < max_edge_v) ? max_edge_v : max_edge_u;
+            arco *a_found = find_lock(g, u, v);
             /* Remove the old edge from the MSF. Still in the graph though */
             a_found->msf = false;
             
-            set_msf_neighbors(g->vicini[fu], fv, false);
-            set_msf_neighbors(g->vicini[fv], fu, false);
+            set_msf_neighbors(g->vicini[u], v, false);
+            set_msf_neighbors(g->vicini[v], u, false);
 
             /* Inserting the new edge in the hash table */
             new_a->u = u;      
@@ -974,17 +978,21 @@ bool find_min(node *abr, node *root_small, grafo *g, int *min_u, int *min_v, int
 /* Removes an edge from the MSF */
 int cancella_arco(grafo *g, int u, int v)
 {
-    int fu = (u < v) ? u : v;
-    int fv = (u < v) ? v : u;
-    arco *edge = find_lock(g, fu, fv);
+    if (u > v)
+    {
+        int tmp = u;
+        u = v;
+        v = tmp;
+    }
+    arco *edge = find_lock(g, u, v);
     if (edge == NULL) return NO_EXISTENCE;
     
     /* Edge is not into MSF */
     if (!edge->msf)
     {
-        remove_element(&g->vicini[fu], fv);
-        remove_element(&g->vicini[fv], fu);
-        remove_lock(g, fu, fv);
+        remove_element(&g->vicini[u], v);
+        remove_element(&g->vicini[v], u);
+        remove_lock(g, u, v);
         pthread_mutex_lock(&g->updates);
         g->edges--;
         pthread_mutex_unlock(&g->updates);
@@ -994,15 +1002,15 @@ int cancella_arco(grafo *g, int u, int v)
     else
     {
         int old_w = edge->weight;
-        int old_cc = g->cCon[fu]; /* Used by find_min */
+        int old_cc = g->cCon[u]; /* Used by find_min */
 
         /* Remove the edge from the hash table and adjacency lists */
-        remove_lock(g, fu, fv);
-        remove_element(&g->vicini[fu], fv);
-        remove_element(&g->vicini[fv], fu);
+        remove_lock(g, u, v);
+        remove_element(&g->vicini[u], v);
+        remove_element(&g->vicini[v], u);
         
-        int min_u = fu;
-        int min_v = fv;
+        int min_u = u;
+        int min_v = v;
 
         /* BFS queues */
         queue_t *qu = queue_init();
@@ -1022,12 +1030,12 @@ int cancella_arco(grafo *g, int u, int v)
             exit(10);
         }
 
-        node_u[0] = fu;
-        node_v[0] = fv;
+        node_u[0] = u;
+        node_v[0] = v;
 
-        enqueue(qu, fu);
+        enqueue(qu, u);
         enqueue(qu, -1); /* fu's parent */
-        enqueue(qv, fv);
+        enqueue(qv, v);
         enqueue(qv, -1); /* fv's parent */
         /* Alternating BFS */
         while (!is_empty(qu) && !is_empty(qv))
@@ -1135,20 +1143,15 @@ int cancella_arco(grafo *g, int u, int v)
         arco *min_edge = NULL;
         if (is_found) 
         {
-            /* Normalize edges */
-            int norm_a = new_u < new_v ? new_u : new_v;
-            int norm_b = new_u < new_v ? new_v : new_u;
-            min_edge = find_lock(g, norm_a, norm_b);
+            /* Normalize edge */
+            if (new_u > new_v)
+            {
+                int tmp = new_u;
+                new_u = new_v;
+                new_v = tmp;
+            }
         }
-
-        /* Getting the minimum edge */
-        if (is_found)
-        {
-            /* Normalizing edges */
-            int norm_a = (new_u < new_v) ? new_u : new_v;
-            int norm_b = (new_u < new_v) ? new_v : new_u;
-            min_edge = find_lock(g, norm_a, norm_b);
-        }
+        min_edge = find_lock(g, new_u, new_v);
         if (min_edge == NULL) /* Edge not found: splitting components */
         {
             bool find_min_id = abr_search(smallest_abr, old_cc);
