@@ -836,14 +836,14 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
                 exit(5);
             }
             /* Finding the edge */
-            int u = (max_edge_u < max_edge_v) ? max_edge_u : max_edge_v;
-            int v = (max_edge_u < max_edge_v) ? max_edge_v : max_edge_u;
-            arco *a_found = find_lock(g, u, v);
+            int fu = (max_edge_u < max_edge_v) ? max_edge_u : max_edge_v;
+            int fv = (max_edge_u < max_edge_v) ? max_edge_v : max_edge_u;
+            arco *a_found = find_lock(g, fu, fv);
             /* Remove the old edge from the MSF. Still in the graph though */
             a_found->msf = false;
             
-            set_msf_neighbors(g->vicini[u], v, false);
-            set_msf_neighbors(g->vicini[v], u, false);
+            set_msf_neighbors(g->vicini[fu], v, false);
+            set_msf_neighbors(g->vicini[fv], u, false);
 
             /* Inserting the new edge in the hash table */
             new_a->u = u;      
@@ -978,6 +978,7 @@ bool find_min(node *abr, node *root_small, grafo *g, int *min_u, int *min_v, int
 /* Removes an edge from the MSF */
 int cancella_arco(grafo *g, int u, int v)
 {
+    /* Normalizing edge */
     if (u > v)
     {
         int tmp = u;
