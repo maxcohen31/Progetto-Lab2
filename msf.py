@@ -4,16 +4,16 @@ from os import write
 from sys import argv, stderr
 import heapq
     
-def build_graph(file):
+def build_graph(file) -> tuple[dict[tuple[int,int], int], list[list[tuple[int, int]]], int]:
     """
     Returns a dictionary, the list of edges and the total nodes of the graph
     """
-    nodes = 0
-    # edges -> [(neighbor, w)]
-    edges = []
+    nodes: int = 0
+    # edges -> [(neighbor, weight)]
+    edges: list[list[tuple[int, int]]] = []
     # ht -> {(u,v): w}
-    ht = {}
-    with open(file) as f:
+    ht: dict[tuple[int, int], int] = {}
+    with open(file, 'r') as f:
         for line in f:
             char = line.strip().split()
             if not char: continue
@@ -33,11 +33,11 @@ def build_graph(file):
                 edges[v].append((u, w))    
     return ht, edges, nodes
 
-def aggiungi_arco(edges, ht, u, v, w):
+def aggiungi_arco(edges: list[list[tuple[int, int]]], ht: dict[tuple[int, int], int], u: int, v: int, w: int) -> bool:
     """
     Returns T if a edge is added. Otherwise returns F
     """
-    k = (min(u, v), max(u, v))
+    k: tuple[int, int] = (min(u, v), max(u, v))
     # edge already exists
     if k in ht: return False
     ht[k] = w
@@ -45,11 +45,11 @@ def aggiungi_arco(edges, ht, u, v, w):
     edges[v].append((u, w))
     return True
 
-def cancella_arco(edges, ht, u, v):
+def cancella_arco(edges: list[list[tuple[int, int]]], ht: dict[tuple[int, int], int], u: int, v: int) -> bool:
     """
     Deletes an edge from the graph. Returns T if the given edge is removed, F otherwise
     """
-    k = (min(u, v), max(u, v))
+    k: tuple[int, int] = (min(u, v), max(u, v))
     if k not in ht: return False
     # removes the entry from ht
     del ht[k]
@@ -67,20 +67,20 @@ def cancella_arco(edges, ht, u, v):
     edges[v] = adj_v
     return True
 
-def prim(nodes, edges):
+def prim(nodes: int, edges: list[list[tuple[int, int]]]) -> tuple[int, int]:
     """
     Prim's algorithm. Returns the MSF cost and the number of connected components
     """
-    num_cc = 0
-    msf_cost = 0
-    visited = [False] * nodes
+    num_cc: int = 0
+    msf_cost: int = 0
+    visited: list[bool] = [False] * nodes
 
     for n in range(nodes):
         if visited[n]: continue
         num_cc += 1
         visited[n] = True
         
-        hp = []
+        hp: list[tuple[int, int, int]] = []
         for (neigh, weight) in edges[n]:
             heapq.heappush(hp, (weight, n, neigh))
 
@@ -97,13 +97,13 @@ def prim(nodes, edges):
 
     return num_cc, msf_cost 
     
-def main():
+def main() -> None:
     if len(argv) < 3:
         stderr.write("Usage: msf.py file_grafo file_archi")
         exit(1)
     ht, edg, nod = build_graph(argv[1])
     
-    with open(argv[2]) as f:
+    with open(argv[2], 'r') as f:
         for l in f:
             op = l.strip().split()
             if not op: continue
