@@ -842,8 +842,8 @@ int aggiungi_arco(grafo *g, int u, int v, int w)
             /* Remove the old edge from the MSF. Still in the graph though */
             a_found->msf = false;
             
-            set_msf_neighbors(g->vicini[fu], v, false);
-            set_msf_neighbors(g->vicini[fv], u, false);
+            set_msf_neighbors(g->vicini[fu], fv, false);
+            set_msf_neighbors(g->vicini[fv], fu, false);
 
             /* Inserting the new edge in the hash table */
             new_a->u = u;      
