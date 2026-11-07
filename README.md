@@ -15,6 +15,7 @@ La cancella_arco fa due cose:
 # Sincronizzazione
 Per la parte di sincronizzazione il programma adotta un classico schema produttori-consumatori. In particolare qui si ha un solo produttore e un numero di thread consumatori che sarà l'utente a definire dalla linea di comando. Il numero minimo è tre consumatori.
 Per proteggere le struture dati e garantire un'effettiva sincronizzazione si utilizzano le seguenti strutture dati:
+
     - mu-cc_busy: mutex che protegge l'accesso a cc_busy
 
     - cc_busy: array di booleani. Se cc_busy[i] == true significa che la componente è occupata da un'operazione
