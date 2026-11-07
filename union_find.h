@@ -1,3 +1,5 @@
+#ifndef __union_find_h_
+#define __union_find_h_
 
 typedef struct uf_t 
 {
@@ -20,3 +22,5 @@ void union_op(uf_t *union_find_t, int a, int b);
 
 /* Frees the union-find ds */
 void free_uf(uf_t *union_find_t);
+
+#endif
