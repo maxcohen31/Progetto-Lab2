@@ -18,6 +18,16 @@
 #define DEFAULT_MUTEX 1000
 #define BUFF_SIZE 1024
 
+#define NORMALIZE(U, V) \
+do {\
+    if ((U) > (V))  \
+    {\
+        int TMP = (U); \
+        (U) = (V); \
+        (V) = (TMP); \
+    } \
+} while (0)
+
 typedef enum valid_insertion 
 {
     ILLEGAL = -1,
@@ -572,34 +582,6 @@ grafo *build_graph(hash_t *ht, int nodes, int mux)
     return gr;
 }
 
-void print_graph(grafo *g)
-{
-    printf("###########################\n");
-    printf("----- EDGES -----\n");
-    for (int i = 0; i < g->hash_size; i++)
-    {
-        arco *e = g->gHash[i];
-        while (e != NULL)
-        {
-            printf("(%d, %d, %d, msf=%d)\n", e->u, e->v, e->weight, e->msf);
-            e = e->next;
-        }
-    }
-    printf("----- NEIGHBORS -----\n");
-    for (int i = 0; i <= g->nodes; i++)
-    {
-        elemento *el = g->vicini[i];
-        while (el != NULL)
-        {
-            printf("[%d] -> (w=%d, msf=%d)\n", el->id, el->w, el->msf);
-            el = el->next;
-        }
-    }
-    printf("---- CONNECTED COMPONENT -----\n");
-    for (int i = 0; i < g->nodes; i++) printf("Conn. Comp [%d] -> %d\n", i, g->cCon[i]);
-    printf("###########################\n");
-}
-
 /* Free graph's memory */
 void free_graph(grafo *gr)
 {
@@ -704,12 +686,7 @@ void set_msf_neighbors(elemento *l, int idx, bool new_val)
 int aggiungi_arco(grafo *g, int u, int v, int w)
 {
     /* Normalizing the edge */
-    if (u > v)
-    {
-        int tmp = u;
-        u = v;
-        v = tmp;
-    }
+    NORMALIZE(u, v);
     arco *e_found = find_lock(g, u, v);
     /* Edge not found */
     if (e_found != NULL) return ILLEGAL;
@@ -979,12 +956,7 @@ bool find_min(node *abr, node *root_small, grafo *g, int *min_u, int *min_v, int
 int cancella_arco(grafo *g, int u, int v)
 {
     /* Normalizing edge */
-    if (u > v)
-    {
-        int tmp = u;
-        u = v;
-        v = tmp;
-    }
+    NORMALIZE(u, v);
     arco *edge = find_lock(g, u, v);
     if (edge == NULL) return NO_EXISTENCE;
     
@@ -1145,12 +1117,7 @@ int cancella_arco(grafo *g, int u, int v)
         if (is_found) 
         {
             /* Normalize edge */
-            if (new_u > new_v)
-            {
-                int tmp = new_u;
-                new_u = new_v;
-                new_v = tmp;
-            }
+            NORMALIZE(new_u, new_v);
             min_edge = find_lock(g, new_u, new_v);
         }
         if (min_edge == NULL) /* Edge not found: splitting components */
